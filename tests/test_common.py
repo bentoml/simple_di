@@ -1,46 +1,73 @@
 '''
 common tests
 '''
-import typing
+from simple_di import Container, Provide, Provider, inject
+from simple_di.providers import Callable, Configuration, Static
 
-VT = typing.TypeVar("VT")
-
-
-class Provider(typing.Generic[VT]):
-    def provide(self) -> VT:
-        pass
+# Usage
 
 
-class Callback(Provider, typing.Generic[VT]):
-    def __init__(self, func: typing.Callable[[], VT]):
-        self.func = func
-
-    def provide(self) -> VT:
-        return self.func()
+class MetricsOptions(Container):
+    pass
 
 
-def _ensure_injected(maybe_provider: typing.Union[Provider[VT], VT]) -> VT:
-    if isinstance(maybe_provider, Provider):
-        return maybe_provider.provide()
-    return maybe_provider
+class Options(Container):
+    cpu: Provider[int] = Static(2)
+    worker: Provider[int] = Callable(lambda c: 2 * c + 1, c=cpu)
+    worker_config = Configuration()
+    worker_instance: Provider = Callable(lambda w: {"c": w}, worker_config.b.c)
+    metrics = MetricsOptions
 
 
-def inject(func):
-    def _(*args, **kwargs):
-        injected_args = [_ensure_injected(a) for a in args]
-        injected_kwargs = {k: _ensure_injected(v) for k, v in kwargs.items()}
-        return func(*injected_args, **injected_kwargs)
-
-    return _
-
-
-class Config:
-    a = Callback(lambda: 1)
-
-
-def test_inject():
+def test_inject_function():
     @inject
-    def func(a: Provider[int] = Config.a):
-        return a
+    def func(worker: int = Provide[Options.worker]):
+        return worker
 
+    assert func() == 5
+    assert func(1) == 1
+
+    Options.worker.set(2)
+    assert func() == 2
+
+    Options.worker.reset()
+    assert func() == 5
+
+    Options.cpu.set(1)
+    assert func() == 3
+    Options.cpu.reset()
+
+
+def test_config():
+    @inject
+    def func(c: int = Provide[Options.worker_config.b.c]):
+        return c
+
+    Options.worker_config.set(dict(a=1, b=dict(c=1)))
     assert func() == 1
+    assert Options.worker_instance.get()["c"] == 1
+
+    Options.worker_config.b.c.set(2)
+    assert func() == 2
+    assert Options.worker_instance.get()["c"] == 2
+
+
+def test_inject_method():
+    class A:
+        @inject
+        def __init__(self, worker: int = Provide[Options.worker], **kwargs):
+            self.worker = worker
+            self.kwargs = kwargs
+
+    assert A().worker == 5
+    assert A(1).worker == 1
+
+    Options.worker.set(2)
+    assert A().worker == 2
+
+    Options.worker.reset()
+    assert A().worker == 5
+
+    Options.cpu.set(1)
+    assert A().worker == 3
+    Options.cpu.reset()
