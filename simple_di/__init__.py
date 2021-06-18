@@ -24,6 +24,7 @@ class Provider(typing.Generic[VT]):
 
     def __init__(self):
         self._override: typing.Union[_SentinelClass, VT] = sentinel
+        self._cache: typing.Union[_SentinelClass, VT] = sentinel
 
     def _provide(self) -> VT:
         raise NotImplementedError
@@ -40,6 +41,8 @@ class Provider(typing.Generic[VT]):
         '''
         if not isinstance(self._override, _SentinelClass):
             return self._override
+        if not isinstance(self._cache, _SentinelClass):
+            return self._cache
         return self._provide()
 
     def reset(self) -> None:
@@ -77,10 +80,14 @@ def inject(func):
 
     @functools.wraps(func)
     def _(*args, **kwargs):
-        bind = sig.bind_partial(*args, **kwargs)
+        filtered_args = tuple(a for a in args if a is not sentinel)
+        filtered_kwargs = {k: v for k, v in kwargs.items() if v is not sentinel}
+        bind = sig.bind_partial(*filtered_args, **filtered_kwargs)
         bind.apply_defaults()
-        injected_args = {k: _ensure_injected(v) for k, v in bind.arguments.items()}
-        return func(**injected_args)
+
+        injected_args = tuple(_ensure_injected(v) for v in bind.args)
+        injected_kwargs = {k: _ensure_injected(v) for k, v in bind.kwargs.items()}
+        return func(*injected_args, **injected_kwargs)
 
     return _
 
@@ -91,4 +98,6 @@ class Container:
     '''
 
 
-__all__ = ["Container", "Provider", "Provide", "inject"]
+not_passed = sentinel
+
+__all__ = ["Container", "Provider", "Provide", "inject", "not_passed"]
