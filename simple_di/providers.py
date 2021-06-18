@@ -14,6 +14,16 @@ from simple_di import (
 )
 
 
+__all__ = [
+    "Static",
+    "Callable",
+    "MemoizedCallable",
+    "Factory",
+    "SingletonFactory",
+    "Configuration",
+]
+
+
 class Static(Provider[VT]):
     '''
     provider that returns static values
@@ -57,6 +67,10 @@ class MemoizedCallable(Callable[VT]):
         value = self._func(*_inject_args(self._args), **_inject_kwargs(self._kwargs))
         self._cache = value
         return value
+
+
+Factory = Callable
+SingletonFactory = MemoizedCallable
 
 
 class Configuration(Provider):
