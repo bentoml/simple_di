@@ -24,5 +24,5 @@ setuptools.setup(
         "Programming Language :: Python :: Implementation :: CPython",
     ],
     python_requires=">=3.6.1",
-    extras_require={"test": ["pytest"]},
+    extras_require={"test": ["pytest", "mypy"]},
 )

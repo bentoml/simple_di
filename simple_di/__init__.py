@@ -3,7 +3,7 @@ A simple dependency injection framework
 '''
 import functools
 import inspect
-import typing
+from typing import Callable, Dict, Generic, Tuple, TypeVar, Union
 
 
 class _SentinelClass:
@@ -13,23 +13,22 @@ class _SentinelClass:
 sentinel = _SentinelClass()
 
 
-VT = typing.TypeVar("VT")
+VT = TypeVar("VT")
 
 
-class Provider(typing.Generic[VT]):
+class Provider(Generic[VT]):
     '''
     The base class for Provider implementations. Could be used as the type annotations
     of all the implementations.
     '''
 
-    def __init__(self):
-        self._override: typing.Union[_SentinelClass, VT] = sentinel
-        self._cache: typing.Union[_SentinelClass, VT] = sentinel
+    def __init__(self) -> None:
+        self._override: Union[_SentinelClass, VT] = sentinel
 
     def _provide(self) -> VT:
         raise NotImplementedError
 
-    def set(self, value: VT):
+    def set(self, value: VT) -> None:
         '''
         set the value to this provider, overriding the original values
         '''
@@ -41,8 +40,6 @@ class Provider(typing.Generic[VT]):
         '''
         if not isinstance(self._override, _SentinelClass):
             return self._override
-        if not isinstance(self._cache, _SentinelClass):
-            return self._cache
         return self._provide()
 
     def reset(self) -> None:
@@ -65,10 +62,12 @@ class _ProvideClass:
 Provide = _ProvideClass()
 
 
-def _ensure_injected(maybe_provider: typing.Union[Provider, VT]) -> VT:
-    if isinstance(maybe_provider, Provider):
-        return maybe_provider.get()
-    return maybe_provider
+def _inject_args(args: Tuple) -> Tuple:
+    return tuple(a.get() if isinstance(a, Provider) else a for a in args)
+
+
+def _inject_kwargs(kwargs: Dict) -> Dict:
+    return {k: v.get() if isinstance(v, Provider) else v for k, v in kwargs.items()}
 
 
 def inject(func):
@@ -82,12 +81,11 @@ def inject(func):
     def _(*args, **kwargs):
         filtered_args = tuple(a for a in args if a is not sentinel)
         filtered_kwargs = {k: v for k, v in kwargs.items() if v is not sentinel}
+
         bind = sig.bind_partial(*filtered_args, **filtered_kwargs)
         bind.apply_defaults()
 
-        injected_args = tuple(_ensure_injected(v) for v in bind.args)
-        injected_kwargs = {k: _ensure_injected(v) for k, v in bind.kwargs.items()}
-        return func(*injected_args, **injected_kwargs)
+        return func(*_inject_args(bind.args), **_inject_kwargs(bind.kwargs))
 
     return _
 

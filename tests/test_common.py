@@ -1,7 +1,9 @@
 '''
 common tests
 '''
-from simple_di import Container, Provide, Provider, inject
+from typing import Optional
+
+from simple_di import Container, Provide, Provider, inject, not_passed
 from simple_di.providers import Callable, Configuration, Static
 
 # Usage
@@ -13,21 +15,20 @@ def test_inject_function():
         worker: Provider[int] = Callable(lambda c: 2 * c + 1, c=cpu)
 
     @inject
-    def func(arg, worker: int = Provide[Options.worker]):
-        assert arg
+    def func(worker: int = Provide[Options.worker]):
         return worker
 
-    assert func(1) == 5
-    assert func(1, 1) == 1
+    assert func() == 5
+    assert func(1) == 1
 
     Options.worker.set(2)
-    assert func(1) == 2
+    assert func() == 2
 
     Options.worker.reset()
-    assert func(1) == 5
+    assert func() == 5
 
     Options.cpu.set(1)
-    assert func(1) == 3
+    assert func() == 3
     Options.cpu.reset()
 
 
@@ -53,6 +54,19 @@ def test_inject_method():
     Options.cpu.set(1)
     assert A().worker == 3
     Options.cpu.reset()
+
+
+def test_not_passed():
+    class Options(Container):
+        cpu: Provider[int] = Static(5)
+
+    @inject
+    def func(cpu: Optional[int] = Provide[Options.cpu]):
+        return cpu
+
+    assert func() == func(not_passed) == 5
+    assert func(None) is None
+    assert func(1) == 1
 
 
 def test_config():

@@ -2,12 +2,19 @@
 Provider implementations
 '''
 
-from typing import Any, Callable as CallableType, Generic, Optional, Tuple
+from typing import Any, Callable as CallableType, Optional, Tuple, Union
 
-from simple_di import Provider, VT, _SentinelClass, _ensure_injected, sentinel
+from simple_di import (
+    Provider,
+    VT,
+    _SentinelClass,
+    _inject_args,
+    _inject_kwargs,
+    sentinel,
+)
 
 
-class Static(Provider, Generic[VT]):
+class Static(Provider[VT]):
     '''
     provider that returns static values
     '''
@@ -20,7 +27,7 @@ class Static(Provider, Generic[VT]):
         return self._value
 
 
-class Callable(Provider, Generic[VT]):
+class Callable(Provider[VT]):
     '''
     provider that returns the result of a callable
     '''
@@ -32,20 +39,22 @@ class Callable(Provider, Generic[VT]):
         self._kwargs = kwargs
 
     def _provide(self) -> VT:
-        args = [_ensure_injected(a) for a in self._args]
-        kwargs = {k: _ensure_injected(v) for k, v in self._kwargs.items()}
-        return self._func(*args, **kwargs)
+        return self._func(*_inject_args(self._args), **_inject_kwargs(self._kwargs))
 
 
-class MemoizedCallable(Callable, Generic[VT]):
+class MemoizedCallable(Callable[VT]):
     '''
     provider that returns the result of a callable, but memorize the returns.
     '''
 
+    def __init__(self, func: CallableType[..., VT], *args, **kwargs):
+        super().__init__(func, *args, **kwargs)
+        self._cache: Union[_SentinelClass, VT] = sentinel
+
     def _provide(self) -> VT:
-        args = [_ensure_injected(a) for a in self._args]
-        kwargs = {k: _ensure_injected(v) for k, v in self._kwargs.items()}
-        value = self._func(*args, **kwargs)
+        if not isinstance(self._cache, _SentinelClass):
+            return self._cache
+        value = self._func(*_inject_args(self._args), **_inject_kwargs(self._kwargs))
         self._cache = value
         return value
 
@@ -60,7 +69,7 @@ class Configuration(Provider):
         self._data = data
         self.fallback = fallback
 
-    def set(self, value: dict):
+    def set(self, value: dict) -> None:
         self._data = value
 
     def get(self) -> dict:
@@ -70,7 +79,7 @@ class Configuration(Provider):
             return self.fallback
         return self._data
 
-    def reset(self):
+    def reset(self) -> None:
         raise NotImplementedError()
 
     def __getattr__(self, name) -> "_ConfigurationItem":
@@ -78,7 +87,7 @@ class Configuration(Provider):
             raise AttributeError()
         return _ConfigurationItem(config=self, path=(name,))
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"Configuration(data={self._data})"
 
 
@@ -90,7 +99,7 @@ class _ConfigurationItem(Provider):
         self._config = config
         self._path = path
 
-    def set(self, value):
+    def set(self, value) -> None:
         _cursor = self._config.get()
         for i in self._path[:-1]:
             _cursor = _cursor[i]
@@ -104,7 +113,7 @@ class _ConfigurationItem(Provider):
             _cursor = _cursor[i]
         return _cursor
 
-    def reset(self):
+    def reset(self) -> None:
         raise NotImplementedError()
 
     def __getattr__(self, name) -> "_ConfigurationItem":
