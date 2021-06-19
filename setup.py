@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf8") as f:
 
 setuptools.setup(
     name="simple_di",
-    version="0.0.1",
+    version="0.0.2",
     author="bojiang",
     author_email="bojiang_@outlook.com",
     description="simple dependency injection library",
