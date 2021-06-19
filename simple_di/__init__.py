@@ -3,7 +3,7 @@ A simple dependency injection framework
 '''
 import functools
 import inspect
-from typing import Callable, Dict, Generic, Tuple, TypeVar, Union
+from typing import Dict, Generic, Tuple, TypeVar, Union
 
 
 class _SentinelClass:
@@ -70,7 +70,7 @@ def _inject_kwargs(kwargs: Dict) -> Dict:
     return {k: v.get() if isinstance(v, Provider) else v for k, v in kwargs.items()}
 
 
-def inject(func):
+def _inject(func, respect_none: bool):
     '''
     Used with `Provide`, inject values to provided defaults of the decorated
     function/method when gets called.
@@ -79,8 +79,12 @@ def inject(func):
 
     @functools.wraps(func)
     def _(*args, **kwargs):
-        filtered_args = tuple(a for a in args if a is not sentinel)
-        filtered_kwargs = {k: v for k, v in kwargs.items() if v is not sentinel}
+        if respect_none:
+            filtered_args = tuple(a for a in args if a is not sentinel)
+            filtered_kwargs = {k: v for k, v in kwargs.items() if v is not sentinel}
+        else:
+            filtered_args = tuple(a for a in args if a is not None)
+            filtered_kwargs = {k: v for k, v in kwargs.items() if v is not None}
 
         bind = sig.bind_partial(*filtered_args, **filtered_kwargs)
         bind.apply_defaults()
@@ -88,6 +92,16 @@ def inject(func):
         return func(*_inject_args(bind.args), **_inject_kwargs(bind.kwargs))
 
     return _
+
+
+def inject(func=None, respect_none=True):
+    if func is None:
+        return functools.partial(_inject, respect_none=respect_none)
+
+    if callable(func):
+        return _inject(func, respect_none=respect_none)
+
+    raise ValueError('You must pass either int or str')
 
 
 class Container:

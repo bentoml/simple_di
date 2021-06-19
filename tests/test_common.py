@@ -1,10 +1,11 @@
 '''
 common tests
 '''
+import random
 from typing import Optional
 
-from simple_di import Container, Provide, Provider, inject, not_passed
-from simple_di.providers import Callable, Configuration, Static
+from simple_di import Container, Provide, Provider, inject
+from simple_di.providers import Callable, Configuration, MemoizedCallable, Static
 
 # Usage
 
@@ -42,31 +43,56 @@ def test_inject_method():
         def __init__(self, worker: int = Provide[Options.worker]):
             self.worker = worker
 
-    assert A().worker == 5
-    assert A(1).worker == 1
+        @classmethod
+        @inject
+        def create(cls, worker: int = Provide[Options.worker]):
+            return cls(worker)
+
+    assert A().worker == A.create().worker == 5
+    assert A(1).worker == A.create(1).worker == 1
 
     Options.worker.set(2)
-    assert A().worker == 2
+    assert A().worker == A.create().worker == 2
 
     Options.worker.reset()
-    assert A().worker == 5
+    assert A().worker == A.create().worker == 5
 
     Options.cpu.set(1)
-    assert A().worker == 3
+    assert A().worker == A.create().worker == 3
     Options.cpu.reset()
 
 
-def test_not_passed():
+def test_respect_none():
     class Options(Container):
         cpu: Provider[int] = Static(5)
 
     @inject
-    def func(cpu: Optional[int] = Provide[Options.cpu]):
+    def func1(cpu: Optional[int] = Provide[Options.cpu]):
         return cpu
 
-    assert func() == func(not_passed) == 5
-    assert func(None) is None
-    assert func(1) == 1
+    assert func1() == 5
+    assert func1(None) is None
+    assert func1(1) == 1
+
+    @inject(respect_none=False)
+    def func2(cpu: Optional[int] = Provide[Options.cpu]):
+        return cpu
+
+    assert func2() == 5
+    assert func2(None) == 5
+    assert func2(1) == 1
+
+
+def test_memoized_callable():
+    class Options(Container):
+        port = MemoizedCallable(lambda: random.randint(1, 65535))
+
+    @inject
+    def func(port: int = Provide[Options.port]):
+        return port
+
+    first_value = func()
+    assert func() == first_value
 
 
 def test_config():
