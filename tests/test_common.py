@@ -2,21 +2,21 @@
 common tests
 '''
 import random
-from typing import Optional
+from typing import Dict, Optional, cast
 
 from simple_di import Container, Provide, Provider, inject
-from simple_di.providers import Callable, Configuration, MemoizedCallable, Static
+from simple_di.providers import Configuration, Factory, SingletonFactory, Static
 
 # Usage
 
 
-def test_inject_function():
+def test_inject_function() -> None:
     class Options(Container):
         cpu: Provider[int] = Static(2)
-        worker: Provider[int] = Callable(lambda c: 2 * c + 1, c=cpu)
+        worker: Provider[int] = Factory(lambda c: cast(int, 2 * c + 1), c=cpu)
 
     @inject
-    def func(worker: int = Provide[Options.worker]):
+    def func(worker: int = Provide[Options.worker]) -> int:
         return worker
 
     assert func() == 5
@@ -33,10 +33,10 @@ def test_inject_function():
     Options.cpu.reset()
 
 
-def test_inject_method():
+def test_inject_method() -> None:
     class Options(Container):
         cpu: Provider[int] = Static(2)
-        worker: Provider[int] = Callable(lambda c: 2 * c + 1, c=cpu)
+        worker: Provider[int] = Factory(lambda c: cast(int, 2 * c + 1), c=cpu)
 
     class A:
         @inject
@@ -45,7 +45,7 @@ def test_inject_method():
 
         @classmethod
         @inject
-        def create(cls, worker: int = Provide[Options.worker]):
+        def create(cls, worker: int = Provide[Options.worker]) -> "A":
             return cls(worker)
 
     assert A().worker == A.create().worker == 5
@@ -62,12 +62,12 @@ def test_inject_method():
     Options.cpu.reset()
 
 
-def test_respect_none():
+def test_respect_none() -> None:
     class Options(Container):
         cpu: Provider[int] = Static(5)
 
     @inject
-    def func1(cpu: Optional[int] = Provide[Options.cpu]):
+    def func1(cpu: Optional[int] = Provide[Options.cpu]) -> Optional[int]:
         return cpu
 
     assert func1() == 5
@@ -75,7 +75,7 @@ def test_respect_none():
     assert func1(1) == 1
 
     @inject(respect_none=False)
-    def func2(cpu: Optional[int] = Provide[Options.cpu]):
+    def func2(cpu: Optional[int] = Provide[Options.cpu]) -> Optional[int]:
         return cpu
 
     assert func2() == 5
@@ -83,24 +83,24 @@ def test_respect_none():
     assert func2(1) == 1
 
 
-def test_memoized_callable():
+def test_memoized_callable() -> None:
     class Options(Container):
-        port = MemoizedCallable(lambda: random.randint(1, 65535))
+        port = SingletonFactory(lambda: random.randint(1, 65535))
 
     @inject
-    def func(port: int = Provide[Options.port]):
+    def func(port: int = Provide[Options.port]) -> int:
         return port
 
     first_value = func()
     assert func() == first_value
 
 
-def test_config():
+def test_config() -> None:
     class Options(Container):
         worker_config = Configuration()
 
     @inject
-    def func(c: int = Provide[Options.worker_config.b.c]):
+    def func(c: int = Provide[Options.worker_config.b.c]) -> int:
         return c
 
     assert func(0) == 0
@@ -112,13 +112,15 @@ def test_config():
     assert func() == 2
 
 
-def test_config_callable():
+def test_config_callable() -> None:
     class Options(Container):
         worker_config = Configuration()
-        worker_instance: Provider = Callable(lambda w: {"c": w}, worker_config.b.c)
+        worker_instance: Provider[Dict[str, int]] = Factory(
+            lambda w: {"c": w}, worker_config.b.c
+        )
 
     @inject
-    def func(c: dict = Provide[Options.worker_instance]):
+    def func(c: Dict[str, int] = Provide[Options.worker_instance]) -> Dict[str, int]:
         return c
 
     assert func({"c": 0}) == {"c": 0}
@@ -130,12 +132,12 @@ def test_config_callable():
     assert func() == {"c": 2}
 
 
-def test_config_fallback():
+def test_config_fallback() -> None:
     class Options(Container):
         worker_config = Configuration(fallback=None)
 
     @inject
-    def func(c: int = Provide[Options.worker_config.b.c]):
+    def func(c: int = Provide[Options.worker_config.b.c]) -> int:
         return c
 
     assert func() is None

@@ -3,7 +3,18 @@ A simple dependency injection framework
 '''
 import functools
 import inspect
-from typing import Dict, Generic, Tuple, TypeVar, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    Optional,
+    Tuple,
+    TypeVar,
+    Union,
+    cast,
+    overload,
+)
 
 
 class _SentinelClass:
@@ -62,26 +73,34 @@ class _ProvideClass:
 Provide = _ProvideClass()
 
 
-def _inject_args(args: Tuple) -> Tuple:
+def _inject_args(
+    args: Tuple[Union[Provider[VT], Any], ...]
+) -> Tuple[Union[VT, Any], ...]:
     return tuple(a.get() if isinstance(a, Provider) else a for a in args)
 
 
-def _inject_kwargs(kwargs: Dict) -> Dict:
+def _inject_kwargs(
+    kwargs: Dict[str, Union[Provider[VT], Any]]
+) -> Dict[str, Union[VT, Any]]:
     return {k: v.get() if isinstance(v, Provider) else v for k, v in kwargs.items()}
 
 
-def _inject(func, respect_none: bool):
-    '''
-    Used with `Provide`, inject values to provided defaults of the decorated
-    function/method when gets called.
-    '''
+WrappedCallable = TypeVar("WrappedCallable", bound=Callable[..., Any])
+
+
+def _inject(func: WrappedCallable, respect_none: bool) -> WrappedCallable:
     sig = inspect.signature(func)
 
     @functools.wraps(func)
-    def _(*args, **kwargs):
-        if respect_none:
-            filtered_args = tuple(a for a in args if a is not sentinel)
-            filtered_kwargs = {k: v for k, v in kwargs.items() if v is not sentinel}
+    def _(
+        *args: Optional[Union[Any, _SentinelClass]],
+        **kwargs: Optional[Union[Any, _SentinelClass]]
+    ) -> Any:
+        if not respect_none:
+            filtered_args = tuple(a for a in args if not isinstance(a, _SentinelClass))
+            filtered_kwargs = {
+                k: v for k, v in kwargs.items() if not isinstance(v, _SentinelClass)
+            }
         else:
             filtered_args = tuple(a for a in args if a is not None)
             filtered_kwargs = {k: v for k, v in kwargs.items() if v is not None}
@@ -91,12 +110,31 @@ def _inject(func, respect_none: bool):
 
         return func(*_inject_args(bind.args), **_inject_kwargs(bind.kwargs))
 
-    return _
+    return cast(WrappedCallable, _)
 
 
-def inject(func=None, respect_none=True):
+@overload
+def inject(func: WrappedCallable, respect_none: bool = True) -> WrappedCallable:
+    ...
+
+
+@overload
+def inject(
+    func: None = None, respect_none: bool = True
+) -> Callable[[WrappedCallable], WrappedCallable]:
+    ...
+
+
+def inject(
+    func: Optional[WrappedCallable] = None, respect_none: bool = True
+) -> Union[WrappedCallable, Callable[[WrappedCallable], WrappedCallable]]:
+    '''
+    Used with `Provide`, inject values to provided defaults of the decorated
+    function/method when gets called.
+    '''
     if func is None:
-        return functools.partial(_inject, respect_none=respect_none)
+        wrapped = functools.partial(_inject, respect_none=respect_none)
+        return cast(Callable[[WrappedCallable], WrappedCallable], wrapped)
 
     if callable(func):
         return _inject(func, respect_none=respect_none)

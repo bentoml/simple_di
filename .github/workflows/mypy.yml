@@ -1,4 +1,4 @@
-name: "Check types with mypy"
+name: "mypy-strict"
 
 on:
   push:
@@ -28,8 +28,8 @@ jobs:
         run: pip install .[test]
         shell: bash
       - name: Check package
-        run: mypy simple_di
+        run: mypy --strict simple_di
         shell: bash
       - name: Check tests
-        run: mypy tests
+        run: mypy --strict tests
         shell: bash
