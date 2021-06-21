@@ -96,7 +96,7 @@ def _inject(func: WrappedCallable, respect_none: bool) -> WrappedCallable:
         *args: Optional[Union[Any, _SentinelClass]],
         **kwargs: Optional[Union[Any, _SentinelClass]]
     ) -> Any:
-        if not respect_none:
+        if respect_none:
             filtered_args = tuple(a for a in args if not isinstance(a, _SentinelClass))
             filtered_kwargs = {
                 k: v for k, v in kwargs.items() if not isinstance(v, _SentinelClass)
