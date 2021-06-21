@@ -5,14 +5,14 @@ with open("README.md", "r", encoding="utf8") as f:
 
 setuptools.setup(
     name="simple_di",
-    version="0.0.2",
+    version="0.0.3",
     author="bojiang",
     author_email="bojiang_@outlook.com",
     description="simple dependency injection library",
     long_description=long_description,
     license="Apache License 2.0",
     long_description_content_type="text/markdown",
-    url="https://github.com/bojiang/simple_di",
+    url="https://github.com/bentoml/simple_di",
     packages=setuptools.find_packages(exclude=["tests*"]),
     classifiers=[
         "Operating System :: OS Independent",
