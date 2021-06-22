@@ -147,6 +147,9 @@ class Container:
     The base class of containers
     '''
 
+    def __init__(self) -> None:
+        raise TypeError('Container should not be instantiated')
+
 
 not_passed = sentinel
 
