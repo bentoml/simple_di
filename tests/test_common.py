@@ -2,10 +2,11 @@
 common tests
 '''
 import random
-from typing import Dict, Optional, cast
+from typing import Dict, Optional, Tuple, cast
 
 from simple_di import Container, Provide, Provider, inject
 from simple_di.providers import Configuration, Factory, SingletonFactory, Static
+
 
 # Usage
 
@@ -141,3 +142,29 @@ def test_config_fallback() -> None:
         return c
 
     assert func() is None
+
+
+def test_complex_container():
+    class Options(Container):
+        config = Configuration()
+
+        @SingletonFactory
+        @staticmethod
+        def metrics(
+            address: str = Provide[config.address], port: int = Provide[config.port]
+        ) -> Tuple[str, int]:
+
+            return (address, port)
+
+    class Runtime(Container):
+        @SingletonFactory
+        @staticmethod
+        def metrics(
+            address: str = Provide[Options.config.address],
+            port: int = Provide[Options.config.port],
+        ) -> Tuple[str, int]:
+            return (address, port)
+
+    Options.config.set(dict(address="a.com", port=100))
+    assert Options.metrics.get() == ("a.com", 100)
+    assert Runtime.metrics.get() == ("a.com", 100)

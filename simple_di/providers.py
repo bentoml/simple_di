@@ -10,6 +10,7 @@ from simple_di import (
     _SentinelClass,
     _inject_args,
     _inject_kwargs,
+    inject,
     sentinel,
 )
 
@@ -44,12 +45,16 @@ class Callable(Provider[VT]):
 
     def __init__(self, func: CallableType[..., VT], *args: Any, **kwargs: Any) -> None:
         super().__init__()
-        self._func = func
         self._args = args
         self._kwargs = kwargs
+        self._func: CallableType[..., VT] = func
 
     def _provide(self) -> VT:
         return self._func(*_inject_args(self._args), **_inject_kwargs(self._kwargs))
+
+    def __get__(self, obj: Any, objtype: Any = None) -> "Callable[VT]":
+        self._func = inject(self._func.__get__(obj, objtype))  # type: ignore
+        return self
 
 
 class MemoizedCallable(Callable[VT]):
