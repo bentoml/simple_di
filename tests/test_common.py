@@ -144,7 +144,7 @@ def test_config_fallback() -> None:
     assert func() is None
 
 
-def test_complex_container():
+def test_complex_container() -> None:
     class Options(Container):
         config = Configuration()
 
