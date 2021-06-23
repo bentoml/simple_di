@@ -2,7 +2,7 @@
 common tests
 '''
 import random
-from typing import Dict, Optional, Tuple, cast
+from typing import Dict, Optional, Tuple
 
 from simple_di import Container, Provide, Provider, inject
 from simple_di.providers import Configuration, Factory, SingletonFactory, Static
@@ -14,7 +14,7 @@ from simple_di.providers import Configuration, Factory, SingletonFactory, Static
 def test_inject_function() -> None:
     class Options(Container):
         cpu: Provider[int] = Static(2)
-        worker: Provider[int] = Factory(lambda c: cast(int, 2 * c + 1), c=cpu)
+        worker: Provider[int] = Factory(lambda c: 2 * int(c) + 1, c=cpu)
 
     @inject
     def func(worker: int = Provide[Options.worker]) -> int:
@@ -37,7 +37,7 @@ def test_inject_function() -> None:
 def test_inject_method() -> None:
     class Options(Container):
         cpu: Provider[int] = Static(2)
-        worker: Provider[int] = Factory(lambda c: cast(int, 2 * c + 1), c=cpu)
+        worker: Provider[int] = Factory(lambda c: 2 * int(c) + 1, c=cpu)
 
     class A:
         @inject
@@ -63,7 +63,7 @@ def test_inject_method() -> None:
     Options.cpu.reset()
 
 
-def test_respect_none() -> None:
+def test_squeeze_none() -> None:
     class Options(Container):
         cpu: Provider[int] = Static(5)
 
@@ -75,7 +75,7 @@ def test_respect_none() -> None:
     assert func1(None) is None
     assert func1(1) == 1
 
-    @inject(respect_none=False)
+    @inject(squeeze_none=True)
     def func2(cpu: Optional[int] = Provide[Options.cpu]) -> Optional[int]:
         return cpu
 

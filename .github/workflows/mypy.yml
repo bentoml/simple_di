@@ -8,7 +8,7 @@ on:
 
 jobs:
   unit_tests:
-    name: ${{ matrix.os }} Python ${{ matrix.python-version }} Unit Tests
+    name: Type Checking with Python ${{ matrix.python-version }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
