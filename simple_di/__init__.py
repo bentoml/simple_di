@@ -88,7 +88,7 @@ def _inject_kwargs(
 WrappedCallable = TypeVar("WrappedCallable", bound=Callable[..., Any])
 
 
-def _inject(func: WrappedCallable, respect_none: bool) -> WrappedCallable:
+def _inject(func: WrappedCallable, squeeze_none: bool) -> WrappedCallable:
     sig = inspect.signature(func)
 
     @functools.wraps(func)
@@ -96,7 +96,7 @@ def _inject(func: WrappedCallable, respect_none: bool) -> WrappedCallable:
         *args: Optional[Union[Any, _SentinelClass]],
         **kwargs: Optional[Union[Any, _SentinelClass]]
     ) -> Any:
-        if respect_none:
+        if not squeeze_none:
             filtered_args = tuple(a for a in args if not isinstance(a, _SentinelClass))
             filtered_kwargs = {
                 k: v for k, v in kwargs.items() if not isinstance(v, _SentinelClass)
@@ -114,30 +114,30 @@ def _inject(func: WrappedCallable, respect_none: bool) -> WrappedCallable:
 
 
 @overload
-def inject(func: WrappedCallable, respect_none: bool = True) -> WrappedCallable:
+def inject(func: WrappedCallable, squeeze_none: bool = False) -> WrappedCallable:
     ...
 
 
 @overload
 def inject(
-    func: None = None, respect_none: bool = True
+    func: None = None, squeeze_none: bool = False
 ) -> Callable[[WrappedCallable], WrappedCallable]:
     ...
 
 
 def inject(
-    func: Optional[WrappedCallable] = None, respect_none: bool = True
+    func: Optional[WrappedCallable] = None, squeeze_none: bool = False
 ) -> Union[WrappedCallable, Callable[[WrappedCallable], WrappedCallable]]:
     '''
     Used with `Provide`, inject values to provided defaults of the decorated
     function/method when gets called.
     '''
     if func is None:
-        wrapped = functools.partial(_inject, respect_none=respect_none)
+        wrapped = functools.partial(_inject, squeeze_none=squeeze_none)
         return cast(Callable[[WrappedCallable], WrappedCallable], wrapped)
 
     if callable(func):
-        return _inject(func, respect_none=respect_none)
+        return _inject(func, squeeze_none=squeeze_none)
 
     raise ValueError('You must pass either int or str')
 
@@ -146,6 +146,9 @@ class Container:
     '''
     The base class of containers
     '''
+
+    def __init__(self) -> None:
+        raise TypeError('Container should not be instantiated')
 
 
 not_passed = sentinel

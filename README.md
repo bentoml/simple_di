@@ -25,12 +25,12 @@ Examples:
 
 ```python
     from simple_di import inject, Provide, Provider
-    from simple_di.providers import Static, Callable, Configuration
+    from simple_di.providers import Static, Factory, Configuration
 
 
     class Options(Container):
         cpu: Provider[int] = Static(2)
-        worker: Provider[int] = Callable(lambda c: 2 * c + 1, c=cpu)
+        worker: Provider[int] = Factory(lambda c: 2 * int(c) + 1, c=cpu)
 
     @inject
     def func(worker: int = Provide[Options.worker]):
@@ -56,8 +56,9 @@ Examples:
 - [Provide](#Provide)
 - [providers](#providers)
   - [Static](#Static)
-  - [Callable](#Callable)
   - [Configuration](#Configuration)
+  - [Factory](#Factory)
+  - [SingletonFactory](#SingletonFactory)
 
 ## Type annotation supported
 
@@ -65,3 +66,6 @@ Examples:
 ### inject
 
 Inject values into providers in function/method arguments.
+
+Arguments:
+ - squeeze_none: default False. Treat None value passed in as not passed.
