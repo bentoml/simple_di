@@ -41,10 +41,12 @@ class Provider(Generic[VT]):
     def _provide(self) -> VT:
         raise NotImplementedError
 
-    def set(self, value: VT) -> None:
+    def set(self, value: Union[_SentinelClass, VT]) -> None:
         '''
         set the value to this provider, overriding the original values
         '''
+        if isinstance(value, _SentinelClass):
+            return
         self._override = value
 
     def get(self) -> VT:
@@ -160,6 +162,6 @@ class Container:
         raise TypeError('Container should not be instantiated')
 
 
-not_passed = sentinel
+skip = not_passed = sentinel
 
-__all__ = ["Container", "Provider", "Provide", "inject", "not_passed"]
+__all__ = ["Container", "Provider", "Provide", "inject", "not_passed", "skip"]
