@@ -1,7 +1,6 @@
 '''
 Provider implementations
 '''
-
 from typing import Any, Callable as CallableType, Dict, Optional, Tuple, Union
 
 from simple_di import (
@@ -30,6 +29,8 @@ class Static(Provider[VT]):
     provider that returns static values
     '''
 
+    STATE_FIELDS = Provider.STATE_FIELDS + ('_value',)
+
     def __init__(self, value: VT):
         super().__init__()
         self._value = value
@@ -43,6 +44,8 @@ class Callable(Provider[VT]):
     provider that returns the result of a callable
     '''
 
+    STATE_FIELDS = Provider.STATE_FIELDS + ('_args', "_kwargs", "_func")
+
     def __init__(self, func: CallableType[..., VT], *args: Any, **kwargs: Any) -> None:
         super().__init__()
         self._args = args
@@ -53,7 +56,8 @@ class Callable(Provider[VT]):
         return self._func(*_inject_args(self._args), **_inject_kwargs(self._kwargs))
 
     def __get__(self, obj: Any, objtype: Any = None) -> "Callable[VT]":
-        self._func = inject(self._func.__get__(obj, objtype))  # type: ignore
+        if isinstance(self._func, (classmethod, staticmethod)):
+            self._func = inject(self._func.__get__(obj, objtype))
         return self
 
 
@@ -61,6 +65,8 @@ class MemoizedCallable(Callable[VT]):
     '''
     provider that returns the result of a callable, but memorize the returns.
     '''
+
+    STATE_FIELDS = Callable.STATE_FIELDS + ("_cache",)
 
     def __init__(self, func: CallableType[..., VT], *args: Any, **kwargs: Any) -> None:
         super().__init__(func, *args, **kwargs)
@@ -82,6 +88,8 @@ class Configuration(Provider[Dict[str, Any]]):
     '''
     special provider that reflects the structure of a configuration dictionary.
     '''
+
+    STATE_FIELDS = Provider.STATE_FIELDS + ('_data', "fallback")
 
     def __init__(
         self, data: Optional[Dict[str, Any]] = None, fallback: Any = sentinel
@@ -113,6 +121,9 @@ class Configuration(Provider[Dict[str, Any]]):
 
 
 class _ConfigurationItem(Provider[Any]):
+
+    STATE_FIELDS = Provider.STATE_FIELDS + ('_config', "_path")
+
     def __init__(self, config: Configuration, path: Tuple[str, ...],) -> None:
         super().__init__()
         self._config = config
@@ -121,7 +132,11 @@ class _ConfigurationItem(Provider[Any]):
     def set(self, value: Any) -> None:
         _cursor = self._config.get()
         for i in self._path[:-1]:
-            _cursor = _cursor[i]
+            _next: Union[_SentinelClass, Dict[Any, Any]] = _cursor.get(i, sentinel)
+            if isinstance(_next, _SentinelClass):
+                _next = dict()
+                _cursor[i] = _next
+            _cursor = _next
         _cursor[self._path[-1]] = value
 
     def get(self) -> Any:
