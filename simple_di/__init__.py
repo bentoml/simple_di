@@ -33,6 +33,8 @@ class Provider(Generic[VT]):
     of all the implementations.
     '''
 
+    STATE_FIELDS: Tuple[str, ...] = ("_override",)
+
     def __init__(self) -> None:
         self._override: Union[_SentinelClass, VT] = sentinel
 
@@ -58,6 +60,13 @@ class Provider(Generic[VT]):
         remove the overriding and restore the original value
         '''
         self._override = sentinel
+
+    def __getstate__(self) -> Dict[str, Any]:
+        return {f: getattr(self, f) for f in self.STATE_FIELDS}
+
+    def __setstate__(self, state: Dict[str, Any]) -> None:
+        for i in self.STATE_FIELDS:
+            setattr(self, i, state[i])
 
 
 class _ProvideClass:

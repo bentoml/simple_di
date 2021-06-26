@@ -104,13 +104,15 @@ def test_config() -> None:
     def func(c: int = Provide[Options.worker_config.b.c]) -> int:
         return c
 
-    assert func(0) == 0
+    Options.worker_config.set(dict())
 
-    Options.worker_config.set(dict(a=1, b=dict(c=1)))
-    assert func() == 1
+    assert func(0) == 0
 
     Options.worker_config.b.c.set(2)
     assert func() == 2
+
+    Options.worker_config.set(dict(a=1, b=dict(c=1)))
+    assert func() == 1
 
 
 def test_config_callable() -> None:
