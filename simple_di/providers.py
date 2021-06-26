@@ -92,17 +92,21 @@ class Configuration(Provider[Dict[str, Any]]):
     STATE_FIELDS = Provider.STATE_FIELDS + ('_data', "fallback")
 
     def __init__(
-        self, data: Optional[Dict[str, Any]] = None, fallback: Any = sentinel
+        self,
+        data: Union[_SentinelClass, Dict[str, Any]] = sentinel,
+        fallback: Any = sentinel,
     ) -> None:
         super().__init__()
         self._data = data
         self.fallback = fallback
 
-    def set(self, value: Dict[str, Any]) -> None:
+    def set(self, value: Union[_SentinelClass, Dict[str, Any]]) -> None:
+        if isinstance(value, _SentinelClass):
+            return
         self._data = value
 
     def get(self) -> Union[Dict[str, Any], Any]:
-        if self._data is None:
+        if isinstance(self._data, _SentinelClass):
             if isinstance(self.fallback, _SentinelClass):
                 raise ValueError("Configuration Provider not initialized")
             return self.fallback
@@ -130,6 +134,8 @@ class _ConfigurationItem(Provider[Any]):
         self._path = path
 
     def set(self, value: Any) -> None:
+        if isinstance(value, _SentinelClass):
+            return
         _cursor = self._config.get()
         for i in self._path[:-1]:
             _next: Union[_SentinelClass, Dict[Any, Any]] = _cursor.get(i, sentinel)
@@ -141,7 +147,10 @@ class _ConfigurationItem(Provider[Any]):
 
     def get(self) -> Any:
         _cursor = self._config.get()
-        if self._config.fallback is not sentinel and _cursor is self._config.fallback:
+        if (
+            not isinstance(self._config.fallback, _SentinelClass)
+            and _cursor is self._config.fallback
+        ):
             return self._config.fallback
         for i in self._path:
             _cursor = _cursor[i]
