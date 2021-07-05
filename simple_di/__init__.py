@@ -150,7 +150,7 @@ def inject(
     if callable(func):
         return _inject(func, squeeze_none=squeeze_none)
 
-    raise ValueError('You must pass either int or str')
+    raise ValueError('You must pass either None or Callable')
 
 
 class Container:
