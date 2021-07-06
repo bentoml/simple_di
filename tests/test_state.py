@@ -3,10 +3,9 @@ state loading & saving tests
 '''
 import pickle
 from typing import NoReturn, Tuple
-import uuid
 
 from simple_di import Container, Provide, Provider, inject
-from simple_di.providers import Configuration, Factory, SingletonFactory
+from simple_di.providers import Configuration, Factory, SingletonFactory, Static
 
 
 class NotPicklable:
@@ -15,7 +14,15 @@ class NotPicklable:
 
 
 class Options(Container):
-    uid: Provider[str] = SingletonFactory(lambda: uuid.uuid4().hex)
+    status: Provider[int] = Static(1)
+
+    @SingletonFactory
+    @staticmethod
+    def uid() -> str:
+        import uuid
+
+        return uuid.uuid4().hex
+
     no_picklable: Provider[NotPicklable] = Factory(NotPicklable)
     config: Configuration = Configuration()
 
@@ -39,6 +46,26 @@ def test_config_state() -> None:
     value = Options.config.b.a.get()
     RestoredOptions = pickle.loads(pickle.dumps(Options))
     assert value == RestoredOptions.config.b.a.get()  # restore config value
+
+
+def _assert_options(options):
+    assert options.status.get() == 2
+
+
+def test_spawn_process():
+
+    Options.status.reset()
+    assert Options.status.get() == 1
+    Options.status.set(2)
+
+    import multiprocessing
+
+    ctx = multiprocessing.get_context("spawn")
+
+    p = ctx.Process(target=_assert_options, args=(Options,), daemon=True)
+    p.start()
+    p.join()
+    assert p.exitcode == 0
 
 
 def test_integration() -> None:
