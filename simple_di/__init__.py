@@ -1,6 +1,6 @@
-'''
+"""
 A simple dependency injection framework
-'''
+"""
 import functools
 import inspect
 from typing import (
@@ -28,10 +28,10 @@ VT = TypeVar("VT")
 
 
 class Provider(Generic[VT]):
-    '''
+    """
     The base class for Provider implementations. Could be used as the type annotations
     of all the implementations.
-    '''
+    """
 
     STATE_FIELDS: Tuple[str, ...] = ("_override",)
 
@@ -42,25 +42,25 @@ class Provider(Generic[VT]):
         raise NotImplementedError
 
     def set(self, value: Union[_SentinelClass, VT]) -> None:
-        '''
+        """
         set the value to this provider, overriding the original values
-        '''
+        """
         if isinstance(value, _SentinelClass):
             return
         self._override = value
 
     def get(self) -> VT:
-        '''
+        """
         get the value of this provider
-        '''
+        """
         if not isinstance(self._override, _SentinelClass):
             return self._override
         return self._provide()
 
     def reset(self) -> None:
-        '''
+        """
         remove the overriding and restore the original value
-        '''
+        """
         self._override = sentinel
 
     def __getstate__(self) -> Dict[str, Any]:
@@ -72,10 +72,10 @@ class Provider(Generic[VT]):
 
 
 class _ProvideClass:
-    '''
+    """
     Used as the default value of a injected functool/method. Would be replaced by the
     final value of the provider when this function/method gets called.
-    '''
+    """
 
     def __getitem__(self, provider: Provider[VT]) -> VT:
         return provider  # type: ignore
@@ -100,6 +100,9 @@ WrappedCallable = TypeVar("WrappedCallable", bound=Callable[..., Any])
 
 
 def _inject(func: WrappedCallable, squeeze_none: bool) -> WrappedCallable:
+    if getattr(func, "_is_injected", False):
+        return func
+
     sig = inspect.signature(func)
 
     @functools.wraps(func)
@@ -121,6 +124,7 @@ def _inject(func: WrappedCallable, squeeze_none: bool) -> WrappedCallable:
 
         return func(*_inject_args(bind.args), **_inject_kwargs(bind.kwargs))
 
+    setattr(_, "_is_injected", True)
     return cast(WrappedCallable, _)
 
 
@@ -139,27 +143,27 @@ def inject(
 def inject(
     func: Optional[WrappedCallable] = None, squeeze_none: bool = False
 ) -> Union[WrappedCallable, Callable[[WrappedCallable], WrappedCallable]]:
-    '''
+    """
     Used with `Provide`, inject values to provided defaults of the decorated
     function/method when gets called.
-    '''
+    """
     if func is None:
-        wrapped = functools.partial(_inject, squeeze_none=squeeze_none)
-        return cast(Callable[[WrappedCallable], WrappedCallable], wrapped)
+        wrapper = functools.partial(_inject, squeeze_none=squeeze_none)
+        return cast(Callable[[WrappedCallable], WrappedCallable], wrapper)
 
     if callable(func):
         return _inject(func, squeeze_none=squeeze_none)
 
-    raise ValueError('You must pass either None or Callable')
+    raise ValueError("You must pass either None or Callable")
 
 
 class Container:
-    '''
+    """
     The base class of containers
-    '''
+    """
 
-    def __init__(self) -> None:
-        raise TypeError('Container should not be instantiated')
+    def __getstate__(self) -> Dict[str, Any]:
+        return dict(self.__dict__, **self.__class__.__dict__)
 
 
 skip = not_passed = sentinel

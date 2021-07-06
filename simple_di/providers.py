@@ -1,7 +1,9 @@
-'''
+"""
 Provider implementations
-'''
-from typing import Any, Callable as CallableType, Dict, Optional, Tuple, Union
+"""
+import importlib
+from types import LambdaType, ModuleType
+from typing import Any, Callable as CallableType, Dict, Tuple, Union
 
 from simple_di import (
     Provider,
@@ -25,11 +27,11 @@ __all__ = [
 
 
 class Static(Provider[VT]):
-    '''
+    """
     provider that returns static values
-    '''
+    """
 
-    STATE_FIELDS = Provider.STATE_FIELDS + ('_value',)
+    STATE_FIELDS = Provider.STATE_FIELDS + ("_value",)
 
     def __init__(self, value: VT):
         super().__init__()
@@ -39,34 +41,67 @@ class Static(Provider[VT]):
         return self._value
 
 
-class Callable(Provider[VT]):
-    '''
-    provider that returns the result of a callable
-    '''
+def _probe_unique_name(module: ModuleType, origin_name: str) -> str:
+    name = "__simple_di_" + origin_name.replace(".", "_").replace("<lambda>", "lambda")
+    num = 0
+    while hasattr(module, f"{name}{num or ''}"):
+        num += 1
+    return f"{name}{num or ''}"
 
-    STATE_FIELDS = Provider.STATE_FIELDS + ('_args', "_kwargs", "_func")
+
+def _patch_anonymous(func: Any) -> None:
+    module_name = func.__module__
+    origin_name = func.__qualname__
+
+    module = importlib.import_module(module_name)
+    name = _probe_unique_name(module, origin_name)
+    func.__qualname__ = name
+    func.__name__ = name
+    setattr(module, name, func)
+
+
+class Factory(Provider[VT]):
+    """
+    provider that returns the result of a callable
+    """
+
+    STATE_FIELDS = Provider.STATE_FIELDS + (
+        "_args",
+        "_kwargs",
+        "_func",
+        "_chain_inject",
+    )
 
     def __init__(self, func: CallableType[..., VT], *args: Any, **kwargs: Any) -> None:
         super().__init__()
         self._args = args
         self._kwargs = kwargs
-        self._func: CallableType[..., VT] = func
+        self._chain_inject = False
+        if isinstance(func, classmethod):
+            raise TypeError("Factory as decorator only supports static methods")
+        if isinstance(func, LambdaType):
+            _patch_anonymous(func)
+        if isinstance(func, staticmethod):
+            self._chain_inject = True
+            func = func.__func__
+            _patch_anonymous(func)
+        self._func = func
 
     def _provide(self) -> VT:
-        return self._func(*_inject_args(self._args), **_inject_kwargs(self._kwargs))
+        if self._chain_inject:
+            return inject(self._func)(
+                *_inject_args(self._args), **_inject_kwargs(self._kwargs)
+            )
+        else:
+            return self._func(*_inject_args(self._args), **_inject_kwargs(self._kwargs))
 
-    def __get__(self, obj: Any, objtype: Any = None) -> "Callable[VT]":
-        if isinstance(self._func, (classmethod, staticmethod)):
-            self._func = inject(self._func.__get__(obj, objtype))
-        return self
 
-
-class MemoizedCallable(Callable[VT]):
-    '''
+class SingletonFactory(Factory[VT]):
+    """
     provider that returns the result of a callable, but memorize the returns.
-    '''
+    """
 
-    STATE_FIELDS = Callable.STATE_FIELDS + ("_cache",)
+    STATE_FIELDS = Factory.STATE_FIELDS + ("_cache",)
 
     def __init__(self, func: CallableType[..., VT], *args: Any, **kwargs: Any) -> None:
         super().__init__(func, *args, **kwargs)
@@ -75,21 +110,21 @@ class MemoizedCallable(Callable[VT]):
     def _provide(self) -> VT:
         if not isinstance(self._cache, _SentinelClass):
             return self._cache
-        value = self._func(*_inject_args(self._args), **_inject_kwargs(self._kwargs))
+        value = super()._provide()
         self._cache = value
         return value
 
 
-Factory = Callable
-SingletonFactory = MemoizedCallable
+Callable = Factory
+MemoizedCallable = SingletonFactory
 
 
 class Configuration(Provider[Dict[str, Any]]):
-    '''
+    """
     special provider that reflects the structure of a configuration dictionary.
-    '''
+    """
 
-    STATE_FIELDS = Provider.STATE_FIELDS + ('_data', "fallback")
+    STATE_FIELDS = Provider.STATE_FIELDS + ("_data", "fallback")
 
     def __init__(
         self,
@@ -126,7 +161,7 @@ class Configuration(Provider[Dict[str, Any]]):
 
 class _ConfigurationItem(Provider[Any]):
 
-    STATE_FIELDS = Provider.STATE_FIELDS + ('_config', "_path")
+    STATE_FIELDS = Provider.STATE_FIELDS + ("_config", "_path")
 
     def __init__(self, config: Configuration, path: Tuple[str, ...],) -> None:
         super().__init__()
