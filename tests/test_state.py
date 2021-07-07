@@ -1,29 +1,56 @@
-'''
+"""
 state loading & saving tests
-'''
+"""
 import pickle
 from typing import NoReturn, Tuple
 import uuid
 
-from simple_di import Container, Provide, Provider, inject
-from simple_di.providers import Configuration, Factory, SingletonFactory
+from simple_di import Provide, Provider, container, inject, sync_container
+from simple_di.providers import Configuration, Factory, SingletonFactory, Static
 
 
 class NotPicklable:
     def __getstate__(self) -> NoReturn:
-        raise TypeError('Not picklable')  # will raise once try to pickle it
+        raise TypeError("Not picklable")  # will raise once try to pickle it
 
 
-class Options(Container):
-    uid: Provider[str] = SingletonFactory(lambda: uuid.uuid4().hex)
+@container
+class OptionsClass:
+    status: Provider[int] = Static(1)
+
+    @SingletonFactory
+    @staticmethod
+    def uid() -> str:
+        return uuid.uuid4().hex
+
+    uid2: Provider[str] = SingletonFactory(lambda: uuid.uuid4().hex)
     no_picklable: Provider[NotPicklable] = Factory(NotPicklable)
     config: Configuration = Configuration()
 
 
+Options = OptionsClass()
+
+
 def test_factory_state() -> None:
+    RestoredUID = pickle.loads(pickle.dumps(Options.uid))
     uid = Options.uid.get()
+
+    assert uid != RestoredUID.get()  # restore state of SingletonFactory
+
+    RestoredUID = pickle.loads(pickle.dumps(Options.uid))
+    assert uid == RestoredUID.get()  # restore state of SingletonFactory
+
     RestoredOptions = pickle.loads(pickle.dumps(Options))
     assert uid == RestoredOptions.uid.get()  # restore state of SingletonFactory
+
+
+def test_lambda_factory_state() -> None:
+    uid = Options.uid2.get()
+    RestoredUID = pickle.loads(pickle.dumps(Options.uid2))
+    assert uid == RestoredUID.get()  # restore state of SingletonFactory
+
+    RestoredOptions = pickle.loads(pickle.dumps(Options))
+    assert uid == RestoredOptions.uid2.get()  # restore state of SingletonFactory
 
 
 def test_singleton_state() -> None:
@@ -39,6 +66,46 @@ def test_config_state() -> None:
     value = Options.config.b.a.get()
     RestoredOptions = pickle.loads(pickle.dumps(Options))
     assert value == RestoredOptions.config.b.a.get()  # restore config value
+
+
+def _assert_options(options: OptionsClass) -> None:
+    assert options.status.get() == 2, options.status.get()
+
+
+def test_spawn_process() -> None:
+
+    Options.status.reset()
+    assert Options.status.get() == 1
+    Options.status.set(2)
+
+    import multiprocessing
+
+    ctx = multiprocessing.get_context("spawn")
+
+    p = ctx.Process(target=_assert_options, args=(Options,), daemon=True)
+    p.start()
+    p.join()
+    assert p.exitcode == 0
+
+
+def _assert_synced_options(options: OptionsClass) -> None:
+    sync_container(from_=options, to_=Options)
+    assert Options.status.get() == 2, Options.status.get()
+
+
+def test_sync_container() -> None:
+    Options.status.reset()
+    assert Options.status.get() == 1
+    Options.status.set(2)
+
+    import multiprocessing
+
+    ctx = multiprocessing.get_context("spawn")
+
+    p = ctx.Process(target=_assert_synced_options, args=(Options,), daemon=True)
+    p.start()
+    p.join()
+    assert p.exitcode == 0
 
 
 def test_integration() -> None:
