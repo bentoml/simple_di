@@ -24,5 +24,6 @@ setuptools.setup(
         "Programming Language :: Python :: Implementation :: CPython",
     ],
     python_requires=">=3.6.1",
+    install_requires=['dataclasses; python_version < "3.7.0"',],
     extras_require={"test": ["pytest", "mypy"]},
 )

@@ -5,7 +5,7 @@ import pickle
 from typing import NoReturn, Tuple
 import uuid
 
-from simple_di import Container, Provide, Provider, inject
+from simple_di import Provide, Provider, container, inject, sync_container
 from simple_di.providers import Configuration, Factory, SingletonFactory, Static
 
 
@@ -14,7 +14,8 @@ class NotPicklable:
         raise TypeError("Not picklable")  # will raise once try to pickle it
 
 
-class OptionsClass(Container):
+@container
+class OptionsClass:
     status: Provider[int] = Static(1)
 
     @SingletonFactory
@@ -82,6 +83,26 @@ def test_spawn_process() -> None:
     ctx = multiprocessing.get_context("spawn")
 
     p = ctx.Process(target=_assert_options, args=(Options,), daemon=True)
+    p.start()
+    p.join()
+    assert p.exitcode == 0
+
+
+def _assert_synced_options(options: OptionsClass) -> None:
+    sync_container(from_=options, to_=Options)
+    assert Options.status.get() == 2, Options.status.get()
+
+
+def test_sync_container() -> None:
+    Options.status.reset()
+    assert Options.status.get() == 1
+    Options.status.set(2)
+
+    import multiprocessing
+
+    ctx = multiprocessing.get_context("spawn")
+
+    p = ctx.Process(target=_assert_synced_options, args=(Options,), daemon=True)
     p.start()
     p.join()
     assert p.exitcode == 0

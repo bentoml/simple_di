@@ -4,7 +4,7 @@ common tests
 import random
 from typing import Dict, Optional, Tuple
 
-from simple_di import Container, Provide, Provider, inject
+from simple_di import Provide, Provider, container, inject
 from simple_di.providers import Configuration, Factory, SingletonFactory, Static
 
 
@@ -12,7 +12,8 @@ from simple_di.providers import Configuration, Factory, SingletonFactory, Static
 
 
 def test_inject_function() -> None:
-    class Options(Container):
+    @container
+    class Options:
         cpu: Provider[int] = Static(2)
         worker: Provider[int] = Factory(lambda c: 2 * int(c) + 1, c=cpu)
 
@@ -37,7 +38,8 @@ def test_inject_function() -> None:
 
 
 def test_inject_method() -> None:
-    class Options(Container):
+    @container
+    class Options:
         cpu: Provider[int] = Static(2)
         worker: Provider[int] = Factory(lambda c: 2 * int(c) + 1, c=cpu)
 
@@ -68,7 +70,8 @@ def test_inject_method() -> None:
 
 
 def test_squeeze_none() -> None:
-    class Options(Container):
+    @container
+    class Options:
         cpu: Provider[int] = Static(5)
 
     OPTIONS = Options()
@@ -91,7 +94,8 @@ def test_squeeze_none() -> None:
 
 
 def test_memoized_callable() -> None:
-    class Options(Container):
+    @container
+    class Options:
         port = SingletonFactory(lambda: random.randint(1, 65535))
 
     OPTIONS = Options()
@@ -105,7 +109,8 @@ def test_memoized_callable() -> None:
 
 
 def test_config() -> None:
-    class Options(Container):
+    @container
+    class Options:
         worker_config = Configuration()
 
     OPTIONS = Options()
@@ -126,7 +131,8 @@ def test_config() -> None:
 
 
 def test_config_callable() -> None:
-    class Options(Container):
+    @container
+    class Options:
         worker_config = Configuration()
         worker_instance: Provider[Dict[str, int]] = Factory(
             lambda w: {"c": w}, worker_config.b.c
@@ -148,7 +154,8 @@ def test_config_callable() -> None:
 
 
 def test_config_fallback() -> None:
-    class Options(Container):
+    @container
+    class Options:
         worker_config = Configuration(fallback=None)
 
     OPTIONS = Options()
@@ -161,7 +168,8 @@ def test_config_fallback() -> None:
 
 
 def test_complex_container() -> None:
-    class Options(Container):
+    @container
+    class Options:
         config = Configuration()
 
         @SingletonFactory
@@ -174,7 +182,8 @@ def test_complex_container() -> None:
 
     OPTIONS = Options()
 
-    class Runtime(Container):
+    @container
+    class Runtime:
         @SingletonFactory
         @staticmethod
         def metrics(

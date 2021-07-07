@@ -1,6 +1,7 @@
 """
 A simple dependency injection framework
 """
+import dataclasses
 import functools
 import inspect
 from typing import (
@@ -15,6 +16,7 @@ from typing import (
     cast,
     overload,
 )
+from typing_extensions import Protocol
 
 
 class _SentinelClass:
@@ -157,15 +159,29 @@ def inject(
     raise ValueError("You must pass either None or Callable")
 
 
-class Container:
-    """
-    The base class of containers
-    """
+def sync_container(from_: Any, to_: Any) -> None:
+    for f in dataclasses.fields(to_):
+        src = f.default
+        target = getattr(from_, f.name, None)
+        if target is None:
+            continue
+        if isinstance(src, Provider):
+            src.__setstate__(target.__getstate__())
+        elif dataclasses.is_dataclass(src):
+            sync_container(src, target)
 
-    def __getstate__(self) -> Dict[str, Any]:
-        return dict(self.__dict__, **self.__class__.__dict__)
+
+container = dataclasses.dataclass
 
 
 skip = not_passed = sentinel
 
-__all__ = ["Container", "Provider", "Provide", "inject", "not_passed", "skip"]
+__all__ = [
+    "container",
+    "Provider",
+    "Provide",
+    "inject",
+    "not_passed",
+    "skip",
+    "sync_container",
+]

@@ -24,13 +24,16 @@ A simple, strictly typed dependency injection library.
 Examples:
 
 ```python
-    from simple_di import inject, Provide, Provider
+    from simple_di import inject, Provide, Provider, container
     from simple_di.providers import Static, Factory, Configuration
 
 
-    class Options(Container):
+    @container
+    class OptionsClass(container):
         cpu: Provider[int] = Static(2)
         worker: Provider[int] = Factory(lambda c: 2 * int(c) + 1, c=cpu)
+
+    Options = OptionsClass()
 
     @inject
     def func(worker: int = Provide[Options.worker]):
@@ -52,6 +55,8 @@ Examples:
 
 ## API
 
+- [container](#container)
+- [sync_container](#sync_container)
 - [inject](#inject)
 - [Provide](#Provide)
 - [providers](#providers)
