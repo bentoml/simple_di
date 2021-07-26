@@ -7,7 +7,6 @@ from typing import Dict, Optional, Tuple
 from simple_di import Provide, Provider, container, inject
 from simple_di.providers import Configuration, Factory, SingletonFactory, Static
 
-
 # Usage
 
 
@@ -126,8 +125,37 @@ def test_config() -> None:
     OPTIONS.worker_config.b.c.set(2)
     assert func() == 2
 
-    OPTIONS.worker_config.set(dict(a=1, b=dict(c=1)))
+    OPTIONS.worker_config.set({"a": 1, "b": {"c": 1}})
     assert func() == 1
+
+
+def test_complex_config() -> None:
+    @container
+    class Options:
+        config = Configuration()
+        default_remote = config.remotes[config.default_remote]
+        default_local = config.locals[0]
+
+    OPTIONS = Options()
+    OPTIONS.config.set(
+        {
+            "remotes": {
+                "a": {"workers": 1},
+                "b": {"workers": 2},
+                "c": {"workers": 3},
+                "d": {"workers": 4},
+            },
+            "default_remote": "a",
+            "locals": ["a", "b"],
+        }
+    )
+
+    assert OPTIONS.default_remote.workers.get() == 1
+    OPTIONS.config.default_remote.set("b")
+    assert OPTIONS.default_remote.workers.get() == 2
+
+    assert OPTIONS.config.remotes["c"].workers.get() == 3
+    assert OPTIONS.default_local.get() == "a"
 
 
 def test_config_callable() -> None:
@@ -146,7 +174,7 @@ def test_config_callable() -> None:
 
     assert func({"c": 0}) == {"c": 0}
 
-    OPTIONS.worker_config.set(dict(a=1, b=dict(c=1)))
+    OPTIONS.worker_config.set({"a": 1, "b": dict(c=1)})
     assert func() == {"c": 1}
 
     OPTIONS.worker_config.b.c.set(2)

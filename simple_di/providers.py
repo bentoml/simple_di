@@ -3,18 +3,19 @@ Provider implementations
 """
 import importlib
 from types import LambdaType, ModuleType
-from typing import Any, Callable as CallableType, Dict, Tuple, Union
+from typing import Any
+from typing import Callable as CallableType
+from typing import Dict, Tuple, Union
 
 from simple_di import (
-    Provider,
     VT,
-    _SentinelClass,
+    Provider,
     _inject_args,
     _inject_kwargs,
+    _SentinelClass,
     inject,
     sentinel,
 )
-
 
 __all__ = [
     "Static",
@@ -118,8 +119,11 @@ class SingletonFactory(Factory[VT]):
 Callable = Factory
 MemoizedCallable = SingletonFactory
 
+ConfigDictType = Dict[Union[str, int], Any]
+PathItemType = Union[int, str, Provider[int], Provider[str]]
 
-class Configuration(Provider[Dict[str, Any]]):
+
+class Configuration(Provider[ConfigDictType]):
     """
     special provider that reflects the structure of a configuration dictionary.
     """
@@ -128,19 +132,19 @@ class Configuration(Provider[Dict[str, Any]]):
 
     def __init__(
         self,
-        data: Union[_SentinelClass, Dict[str, Any]] = sentinel,
+        data: Union[_SentinelClass, ConfigDictType] = sentinel,
         fallback: Any = sentinel,
     ) -> None:
         super().__init__()
         self._data = data
         self.fallback = fallback
 
-    def set(self, value: Union[_SentinelClass, Dict[str, Any]]) -> None:
+    def set(self, value: Union[_SentinelClass, ConfigDictType]) -> None:
         if isinstance(value, _SentinelClass):
             return
         self._data = value
 
-    def get(self) -> Union[Dict[str, Any], Any]:
+    def get(self) -> Union[ConfigDictType, Any]:
         if isinstance(self._data, _SentinelClass):
             if isinstance(self.fallback, _SentinelClass):
                 raise ValueError("Configuration Provider not initialized")
@@ -155,6 +159,9 @@ class Configuration(Provider[Dict[str, Any]]):
             raise AttributeError()
         return _ConfigurationItem(config=self, path=(name,))
 
+    def __getitem__(self, key: PathItemType) -> "_ConfigurationItem":
+        return _ConfigurationItem(config=self, path=(key,))
+
     def __repr__(self) -> str:
         return f"Configuration(data={self._data}, fallback={self.fallback})"
 
@@ -163,7 +170,7 @@ class _ConfigurationItem(Provider[Any]):
 
     STATE_FIELDS = Provider.STATE_FIELDS + ("_config", "_path")
 
-    def __init__(self, config: Configuration, path: Tuple[str, ...],) -> None:
+    def __init__(self, config: Configuration, path: Tuple[PathItemType, ...],) -> None:
         super().__init__()
         self._config = config
         self._path = path
@@ -173,12 +180,17 @@ class _ConfigurationItem(Provider[Any]):
             return
         _cursor = self._config.get()
         for i in self._path[:-1]:
+            if isinstance(i, Provider):
+                i = i.get()
             _next: Union[_SentinelClass, Dict[Any, Any]] = _cursor.get(i, sentinel)
             if isinstance(_next, _SentinelClass):
                 _next = dict()
                 _cursor[i] = _next
             _cursor = _next
-        _cursor[self._path[-1]] = value
+        last_i = self._path[-1]
+        if isinstance(last_i, Provider):
+            last_i = last_i.get()
+        _cursor[last_i] = value
 
     def get(self) -> Any:
         _cursor = self._config.get()
@@ -188,6 +200,8 @@ class _ConfigurationItem(Provider[Any]):
         ):
             return self._config.fallback
         for i in self._path:
+            if isinstance(i, Provider):
+                i = i.get()
             _cursor = _cursor[i]
         return _cursor
 
@@ -198,6 +212,9 @@ class _ConfigurationItem(Provider[Any]):
         if name in ("_config", "_path", "_override"):
             raise AttributeError()
         return type(self)(config=self._config, path=self._path + (name,))
+
+    def __getitem__(self, key: PathItemType) -> "_ConfigurationItem":
+        return type(self)(config=self._config, path=self._path + (key,))
 
     def __repr__(self) -> str:
         return f"_ConfigurationItem(_config={self._config._data}, _path={self._path})"
