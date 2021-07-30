@@ -16,7 +16,6 @@ from typing import (
     cast,
     overload,
 )
-from typing_extensions import Protocol
 
 
 class _SentinelClass:
@@ -75,7 +74,7 @@ class Provider(Generic[VT]):
 
 class _ProvideClass:
     """
-    Used as the default value of a injected functool/method. Would be replaced by the
+    Used as the default value of an injected function/method. Would be replaced by the
     final value of the provider when this function/method gets called.
     """
 

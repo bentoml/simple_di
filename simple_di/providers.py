@@ -1,6 +1,7 @@
 """
 Provider implementations
 """
+import threading
 import importlib
 from types import LambdaType, ModuleType
 from typing import Any
@@ -21,8 +22,10 @@ __all__ = [
     "Static",
     "Callable",
     "MemoizedCallable",
+    "ThreadLocalMemorizedCallable",
     "Factory",
     "SingletonFactory",
+    "ThreadLocalSingletonFactory",
     "Configuration",
 ]
 
@@ -116,8 +119,39 @@ class SingletonFactory(Factory[VT]):
         return value
 
 
+class ThreadLocalSingletonFactory(Factory[VT]):
+    """
+    provider that returns the result of a callable, but memorize the returns in current thread.
+    """
+
+    STATE_FIELDS = Factory.STATE_FIELDS + ("_cache",)
+
+    _local_cache_key = "_cache"
+
+    def __init__(self, func: CallableType[..., VT], *args: Any, **kwargs: Any) -> None:
+        super().__init__(func, *args, **kwargs)
+        self._local = threading.local()
+
+    @property
+    def _cache(self) -> Union[_SentinelClass, VT]:
+        value: Union[_SentinelClass, VT] = getattr(self._local, self._local_cache_key, sentinel)
+        return value
+
+    @_cache.setter
+    def _cache(self, value: Union[_SentinelClass, VT]) -> None:
+        setattr(self._local, self._local_cache_key, value)
+
+    def _provide(self) -> VT:
+        if not isinstance(self._cache, _SentinelClass):
+            return self._cache
+        value = super()._provide()
+        self._cache = value
+        return value
+
+
 Callable = Factory
 MemoizedCallable = SingletonFactory
+ThreadLocalMemorizedCallable = ThreadLocalSingletonFactory
 
 ConfigDictType = Dict[Union[str, int], Any]
 PathItemType = Union[int, str, Provider[int], Provider[str]]
