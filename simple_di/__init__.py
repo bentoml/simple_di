@@ -16,7 +16,7 @@ from typing import (
     cast,
     overload,
 )
-from typing_extensions import Protocol
+from typing_extensions import GenericMeta  # type: ignore
 
 
 class _SentinelClass:
@@ -26,10 +26,24 @@ class _SentinelClass:
 sentinel = _SentinelClass()
 
 
+class ProviderMeta(GenericMeta):  # type: ignore
+    def __new__(mcs, class_name: str, bases: Tuple[type], attrs: Dict[str, Any],
+                state_fields: Tuple[str, ...] = (), **kwargs: Any) -> "ProviderMeta":
+        state_fields_key = "STATE_FIELDS"
+        all_state_fields = set(state_fields)
+        for base in bases:
+            state_fields_ = getattr(base, state_fields_key, ())   # this class property is retained for compatibility with the old code
+            all_state_fields.update(state_fields_)
+        all_state_fields.update(attrs.pop(state_fields_key, ()))
+        attrs[state_fields_key] = tuple(all_state_fields)
+        cls: "ProviderMeta" = super(ProviderMeta, mcs).__new__(mcs, class_name, bases, attrs, **kwargs)
+        return cls
+
+
 VT = TypeVar("VT")
 
 
-class Provider(Generic[VT]):
+class Provider(Generic[VT], metaclass=ProviderMeta):
     """
     The base class for Provider implementations. Could be used as the type annotations
     of all the implementations.
