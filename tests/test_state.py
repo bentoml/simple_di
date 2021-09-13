@@ -5,7 +5,7 @@ import pickle
 from typing import NoReturn, Tuple
 import uuid
 
-from simple_di import Provide, Provider, container, inject, sync_container
+from simple_di import Provide, Provider, container, inject, sync_container, VT
 from simple_di.providers import Configuration, Factory, SingletonFactory, Static
 
 
@@ -132,3 +132,28 @@ def test_integration() -> None:
 
     assert uid1 == uid2  # restore state of SingletonFactory
     assert no_picklable1 is not no_picklable2  # regenerate Factory
+
+
+class Point(Provider[Tuple[int, int]], state_fields=("x",)):
+
+    STATE_FIELDS = ("y",)
+
+    def __init__(self, x: int, y: int):
+        super().__init__()
+        self.x = x
+        self.y = y
+        self.z = 233
+
+    def _provide(self) -> Tuple[int, int]:
+        return self.x, self.y
+
+
+def test_state_fields() -> None:
+
+    point = Point(1, 2)
+    assert point.get() == (1, 2)
+    assert hasattr(point, 'z')
+
+    new_point = pickle.loads(pickle.dumps(point))
+    assert new_point.get() == (1, 2)
+    assert not hasattr(new_point, 'z')

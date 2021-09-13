@@ -35,7 +35,7 @@ class Static(Provider[VT]):
     provider that returns static values
     """
 
-    STATE_FIELDS = Provider.STATE_FIELDS + ("_value",)
+    STATE_FIELDS: Tuple[str, ...] = ("_value",)
 
     def __init__(self, value: VT):
         super().__init__()
@@ -69,7 +69,7 @@ class Factory(Provider[VT]):
     provider that returns the result of a callable
     """
 
-    STATE_FIELDS = Provider.STATE_FIELDS + (
+    STATE_FIELDS: Tuple[str, ...] = (
         "_args",
         "_kwargs",
         "_func",
@@ -105,7 +105,7 @@ class SingletonFactory(Factory[VT]):
     provider that returns the result of a callable, but memorize the returns.
     """
 
-    STATE_FIELDS = Factory.STATE_FIELDS + ("_cache",)
+    STATE_FIELDS: Tuple[str, ...] = ("_cache",)
 
     def __init__(self, func: CallableType[..., VT], *args: Any, **kwargs: Any) -> None:
         super().__init__(func, *args, **kwargs)
@@ -162,7 +162,7 @@ class Configuration(Provider[ConfigDictType]):
     special provider that reflects the structure of a configuration dictionary.
     """
 
-    STATE_FIELDS = Provider.STATE_FIELDS + ("_data", "fallback")
+    STATE_FIELDS: Tuple[str, ...] = ("_data", "fallback")
 
     def __init__(
         self,
@@ -202,7 +202,7 @@ class Configuration(Provider[ConfigDictType]):
 
 class _ConfigurationItem(Provider[Any]):
 
-    STATE_FIELDS = Provider.STATE_FIELDS + ("_config", "_path")
+    STATE_FIELDS: Tuple[str, ...] = ("_config", "_path")
 
     def __init__(self, config: Configuration, path: Tuple[PathItemType, ...],) -> None:
         super().__init__()
