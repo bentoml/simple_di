@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf8") as f:
 
 setuptools.setup(
     name="simple_di",
-    version="0.1.1",
+    version="0.1.2",
     author="bojiang",
     author_email="bojiang_@outlook.com",
     description="simple dependency injection library",
@@ -14,7 +14,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/bentoml/simple_di",
     packages=setuptools.find_packages(exclude=["tests*"]),
-    package_data={"simple_di": ["*.pyi", "py.typed"]},
+    package_data={"simple_di": ["py.typed"]},
     classifiers=[
         "Operating System :: OS Independent",
         "Development Status :: 2 - Pre-Alpha",
@@ -28,7 +28,7 @@ setuptools.setup(
     install_requires=[
         'dataclasses; python_version < "3.7.0"',
         'types-dataclasses; python_version < "3.7.0"',
-        'typing-extensions'
+        'typing-extensions',
     ],
     extras_require={"test": ["pytest", "mypy"]},
 )
