@@ -1,4 +1,4 @@
-from simple_di import Provider, VT, _SentinelClass
+from simple_di import Provider as Provider, VT as VT, _SentinelClass as _SentinelClass
 from typing import Any, Callable as CallableType, Dict, Tuple, Union
 
 class Static(Provider[VT]):
