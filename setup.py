@@ -14,6 +14,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/bentoml/simple_di",
     packages=setuptools.find_packages(exclude=["tests*"]),
+    package_data={"": ["*.pyi", "py.typed"]},
     classifiers=[
         "Operating System :: OS Independent",
         "Development Status :: 2 - Pre-Alpha",
