@@ -16,7 +16,12 @@ from typing import (
     cast,
     overload,
 )
-from typing_extensions import GenericMeta  # type: ignore
+
+try:
+    from typing_extensions import GenericMeta
+except ImportError:
+    class GenericMeta(type):
+        pass
 
 
 class _SentinelClass:
