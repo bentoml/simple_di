@@ -28,7 +28,7 @@ setuptools.setup(
     install_requires=[
         'dataclasses; python_version < "3.7.0"',
         'types-dataclasses; python_version < "3.7.0"',
-        'typing-extensions',
+        'typing-extensions < 4',
     ],
     extras_require={"test": ["pytest", "mypy"]},
 )
