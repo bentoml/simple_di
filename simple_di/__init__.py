@@ -18,9 +18,9 @@ from typing import (
 )
 
 try:
-    from typing_extensions import GenericMeta
+    from typing_extensions import GenericMeta  # type: ignore[attr-defined]
 except ImportError:
-    class GenericMeta(type):
+    class GenericMeta(type):  # type: ignore[no-redef]
         pass
 
 
