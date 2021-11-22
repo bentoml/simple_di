@@ -4,8 +4,16 @@ common tests
 import random
 from typing import Dict, Optional, Tuple
 
+import pytest
+
 from simple_di import Provide, Provider, container, inject
-from simple_di.providers import Configuration, Factory, SingletonFactory, Static
+from simple_di.providers import (
+    Configuration,
+    Factory,
+    Placeholder,
+    SingletonFactory,
+    Static,
+)
 
 # Usage
 
@@ -15,6 +23,7 @@ def test_inject_function() -> None:
     class Options:
         cpu: Provider[int] = Static(2)
         worker: Provider[int] = Factory(lambda c: 2 * int(c) + 1, c=cpu)
+        port: Provider[int] = Placeholder()
 
     OPTIONS = Options()
 
@@ -34,6 +43,16 @@ def test_inject_function() -> None:
     OPTIONS.cpu.set(1)
     assert func() == 3
     OPTIONS.cpu.reset()
+
+    @inject
+    def func2(port: int = Provide[OPTIONS.port]) -> int:
+        return port
+
+    with pytest.raises(RuntimeError):
+        func2()
+
+    OPTIONS.port.set(5000)
+    assert func2() == 5000
 
 
 def test_inject_method() -> None:
