@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf8") as f:
 
 setuptools.setup(
     name="simple_di",
-    version="0.1.2",
+    version="0.1.3",
     author="bojiang",
     author_email="bojiang_@outlook.com",
     description="simple dependency injection library",
@@ -28,7 +28,7 @@ setuptools.setup(
     install_requires=[
         'dataclasses; python_version < "3.7.0"',
         'types-dataclasses; python_version < "3.7.0"',
-        'typing-extensions',
+        'typing-extensions < 4',
     ],
     extras_require={"test": ["pytest", "mypy"]},
 )
