@@ -1,0 +1,37 @@
+name: "pyright"
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  unit_tests:
+    name: Type Checking with Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        python-version: [ '3.6' ]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0  # fetch all tags and branches
+      - name: Setup node
+        uses: actions/setup-node@v2
+        with:
+          node-version: '17'
+      - name: Install test dependencies
+        run: pip install .[test]
+        shell: bash
+      - name: install pyright
+        run: |
+          npm install -g pyright
+      - name: Check package
+        run: pyright simple_di
+        shell: bash
+      - name: Check tests
+        run: pyright tests
+        shell: bash
