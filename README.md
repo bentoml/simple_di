@@ -8,7 +8,6 @@ A simple, strictly typed dependency injection library.
 
 [![mypy-strict](https://github.com/bentoml/simple_di/actions/workflows/mypy.yml/badge.svg)](https://github.com/bentoml/simple_di/actions/workflows/mypy.yml)
 
-[![Python 3.6](https://github.com/bentoml/simple_di/workflows/Python%203.6/badge.svg)](https://github.com/bentoml/simple_di/actions/workflows/py36.yml)
 [![Python 3.7](https://github.com/bentoml/simple_di/workflows/Python%203.7/badge.svg)](https://github.com/bentoml/simple_di/actions/workflows/py37.yml)
 [![Python 3.8](https://github.com/bentoml/simple_di/workflows/Python%203.8/badge.svg)](https://github.com/bentoml/simple_di/actions/workflows/py38.yml)
 [![Python 3.9](https://github.com/bentoml/simple_di/workflows/Python%203.9/badge.svg)](https://github.com/bentoml/simple_di/actions/workflows/py39.yml)
