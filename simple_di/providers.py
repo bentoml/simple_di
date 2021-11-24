@@ -5,7 +5,7 @@ import importlib
 from types import LambdaType, ModuleType
 from typing import Any
 from typing import Callable as CallableType
-from typing import Dict, Tuple, Union
+from typing import Dict, NoReturn, Tuple, Union
 
 from simple_di import (
     VT,
@@ -18,6 +18,7 @@ from simple_di import (
 )
 
 __all__ = [
+    "Placeholder",
     "Static",
     "Callable",
     "MemoizedCallable",
@@ -27,12 +28,21 @@ __all__ = [
 ]
 
 
+class Placeholder(Provider[VT]):
+    """
+    provider that must be set before get
+    """
+
+    def _provide(self) -> NoReturn:
+        raise RuntimeError("Placeholder cannot be get before set")
+
+
 class Static(Provider[VT]):
     """
     provider that returns static values
     """
 
-    STATE_FIELDS: Tuple[str, ...] = ("_value",)
+    STATE_FIELDS: Tuple[str, ...] = Provider.STATE_FIELDS + ("_value",)
 
     def __init__(self, value: VT):
         super().__init__()
@@ -66,7 +76,7 @@ class Factory(Provider[VT]):
     provider that returns the result of a callable
     """
 
-    STATE_FIELDS: Tuple[str, ...] = (
+    STATE_FIELDS: Tuple[str, ...] = Provider.STATE_FIELDS + (
         "_args",
         "_kwargs",
         "_func",
@@ -102,7 +112,7 @@ class SingletonFactory(Factory[VT]):
     provider that returns the result of a callable, but memorize the returns.
     """
 
-    STATE_FIELDS: Tuple[str, ...] = ("_cache",)
+    STATE_FIELDS: Tuple[str, ...] = Factory.STATE_FIELDS + ("_cache",)
 
     def __init__(self, func: CallableType[..., VT], *args: Any, **kwargs: Any) -> None:
         super().__init__(func, *args, **kwargs)
@@ -128,7 +138,7 @@ class Configuration(Provider[ConfigDictType]):
     special provider that reflects the structure of a configuration dictionary.
     """
 
-    STATE_FIELDS: Tuple[str, ...] = ("_data", "fallback")
+    STATE_FIELDS: Tuple[str, ...] = Provider.STATE_FIELDS + ("_data", "fallback")
 
     def __init__(
         self,
@@ -168,9 +178,13 @@ class Configuration(Provider[ConfigDictType]):
 
 class _ConfigurationItem(Provider[Any]):
 
-    STATE_FIELDS: Tuple[str, ...] = ("_config", "_path")
+    STATE_FIELDS: Tuple[str, ...] = Provider.STATE_FIELDS + ("_config", "_path")
 
-    def __init__(self, config: Configuration, path: Tuple[PathItemType, ...],) -> None:
+    def __init__(
+        self,
+        config: Configuration,
+        path: Tuple[PathItemType, ...],
+    ) -> None:
         super().__init__()
         self._config = config
         self._path = path

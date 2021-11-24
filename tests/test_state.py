@@ -2,10 +2,10 @@
 state loading & saving tests
 """
 import pickle
-from typing import NoReturn, Tuple
 import uuid
+from typing import NoReturn, Tuple
 
-from simple_di import Provide, Provider, container, inject, sync_container, VT
+from simple_di import VT, Provide, Provider, container, inject, sync_container
 from simple_di.providers import Configuration, Factory, SingletonFactory, Static
 
 
@@ -134,9 +134,12 @@ def test_integration() -> None:
     assert no_picklable1 is not no_picklable2  # regenerate Factory
 
 
-class Point(Provider[Tuple[int, int]], state_fields=("x",)):
+class Point(Provider[Tuple[int, int]]):
 
-    STATE_FIELDS = ("y",)
+    STATE_FIELDS = Provider.STATE_FIELDS + (
+        "x",
+        "y",
+    )
 
     def __init__(self, x: int, y: int):
         super().__init__()
