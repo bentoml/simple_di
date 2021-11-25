@@ -97,7 +97,7 @@ class Factory(Provider[VT]):
             self._chain_inject = True
             func = func.__func__
             _patch_anonymous(func)
-        self._func = func
+        self._func: CallableType[..., VT] = func
 
     def _provide(self) -> VT:
         if self._chain_inject:
