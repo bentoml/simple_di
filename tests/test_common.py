@@ -2,7 +2,7 @@
 common tests
 """
 import random
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Tuple, cast
 
 import pytest
 
@@ -13,6 +13,7 @@ from simple_di.providers import (
     Placeholder,
     SingletonFactory,
     Static,
+    ConfigDictType,
 )
 
 # Usage
@@ -241,6 +242,6 @@ def test_complex_container() -> None:
 
     RUNTIME = Runtime()
 
-    OPTIONS.config.set(dict(address="a.com", port=100))
+    OPTIONS.config.set(cast(ConfigDictType, dict(address="a.com", port=100)))
     assert OPTIONS.metrics.get() == ("a.com", 100)
     assert RUNTIME.metrics.get() == ("a.com", 100)

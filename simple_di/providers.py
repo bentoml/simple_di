@@ -3,7 +3,7 @@ Provider implementations
 """
 import importlib
 from types import LambdaType, ModuleType
-from typing import Any
+from typing import Any, Generic
 from typing import Callable as CallableType
 from typing import Dict, NoReturn, Tuple, Union
 
@@ -25,10 +25,11 @@ __all__ = [
     "Factory",
     "SingletonFactory",
     "Configuration",
+    "ConfigDictType",
 ]
 
 
-class Placeholder(Provider[VT]):
+class Placeholder(Provider[VT], Generic[VT]):
     """
     provider that must be set before get
     """
@@ -37,7 +38,7 @@ class Placeholder(Provider[VT]):
         raise RuntimeError("Placeholder cannot be get before set")
 
 
-class Static(Provider[VT]):
+class Static(Provider[VT], Generic[VT]):
     """
     provider that returns static values
     """
@@ -71,7 +72,7 @@ def _patch_anonymous(func: Any) -> None:
     setattr(module, name, func)
 
 
-class Factory(Provider[VT]):
+class Factory(Provider[VT], Generic[VT]):
     """
     provider that returns the result of a callable
     """
@@ -107,7 +108,7 @@ class Factory(Provider[VT]):
             return self._func(*_inject_args(self._args), **_inject_kwargs(self._kwargs))
 
 
-class SingletonFactory(Factory[VT]):
+class SingletonFactory(Factory[VT], Generic[VT]):
     """
     provider that returns the result of a callable, but memorize the returns.
     """
