@@ -3,7 +3,7 @@ Provider implementations
 """
 import importlib
 from types import LambdaType, ModuleType
-from typing import Any, Generic
+from typing import Any
 from typing import Callable as CallableType
 from typing import Dict, NoReturn, Tuple, Union
 
@@ -29,7 +29,7 @@ __all__ = [
 ]
 
 
-class Placeholder(Provider[VT], Generic[VT]):
+class Placeholder(Provider[VT]):
     """
     provider that must be set before get
     """
@@ -38,7 +38,7 @@ class Placeholder(Provider[VT], Generic[VT]):
         raise RuntimeError("Placeholder cannot be get before set")
 
 
-class Static(Provider[VT], Generic[VT]):
+class Static(Provider[VT]):
     """
     provider that returns static values
     """
@@ -72,7 +72,7 @@ def _patch_anonymous(func: Any) -> None:
     setattr(module, name, func)
 
 
-class Factory(Provider[VT], Generic[VT]):
+class Factory(Provider[VT]):
     """
     provider that returns the result of a callable
     """
@@ -104,11 +104,10 @@ class Factory(Provider[VT], Generic[VT]):
             return inject(self._func)(
                 *_inject_args(self._args), **_inject_kwargs(self._kwargs)
             )
-        else:
-            return self._func(*_inject_args(self._args), **_inject_kwargs(self._kwargs))
+        return self._func(*_inject_args(self._args), **_inject_kwargs(self._kwargs))
 
 
-class SingletonFactory(Factory[VT], Generic[VT]):
+class SingletonFactory(Factory[VT]):
     """
     provider that returns the result of a callable, but memorize the returns.
     """
@@ -199,7 +198,7 @@ class _ConfigurationItem(Provider[Any]):
                 i = i.get()
             _next: Union[_SentinelClass, Dict[Any, Any]] = _cursor.get(i, sentinel)
             if isinstance(_next, _SentinelClass):
-                _next = dict()
+                _next = {}
                 _cursor[i] = _next
             _cursor = _next
         last_i = self._path[-1]
