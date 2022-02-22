@@ -102,7 +102,8 @@ class Factory(Provider[VT]):
     def _provide(self) -> VT:
         if self._chain_inject:
             return inject(self._func)(
-                *_inject_args(self._args), **_inject_kwargs(self._kwargs)
+                *_inject_args(self._args),
+                **_inject_kwargs(self._kwargs),
             )
         return self._func(*_inject_args(self._args), **_inject_kwargs(self._kwargs))
 
@@ -177,7 +178,6 @@ class Configuration(Provider[ConfigDictType]):
 
 
 class _ConfigurationItem(Provider[Any]):
-
     STATE_FIELDS: Tuple[str, ...] = Provider.STATE_FIELDS + ("_config", "_path")
 
     def __init__(
