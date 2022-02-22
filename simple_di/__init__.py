@@ -1,6 +1,7 @@
 """
 A simple dependency injection framework
 """
+import contextlib
 import dataclasses
 import functools
 import inspect
@@ -9,6 +10,7 @@ from typing import (
     Any,
     Callable,
     Dict,
+    Generator,
     Generic,
     Optional,
     Tuple,
@@ -63,7 +65,7 @@ VT = TypeVar("VT")
 
 class Provider(Generic[VT], metaclass=ProviderMeta):
     """
-    The base class for Provider implementations. Could be used as the type annotations
+    the base class for Provider implementations. Could be used as the type annotations
     of all the implementations.
     """
 
@@ -82,6 +84,19 @@ class Provider(Generic[VT], metaclass=ProviderMeta):
         if isinstance(value, _SentinelClass):
             return
         self._override = value
+
+    @contextlib.contextmanager
+    def patch(self, value: Union[_SentinelClass, VT]) -> Generator[None, None, None]:
+        """
+        patch the value of this provider, restoring the original value after the context
+        """
+        if isinstance(value, _SentinelClass):
+            yield
+            return
+        original = self._override
+        self._override = value
+        yield
+        self._override = original
 
     def get(self) -> VT:
         """
@@ -107,7 +122,7 @@ class Provider(Generic[VT], metaclass=ProviderMeta):
 
 class _ProvideClass:
     """
-    Used as the default value of a injected functool/method. Would be replaced by the
+    used as the default value of a injected functool/method. Would be replaced by the
     final value of the provider when this function/method gets called.
     """
 
@@ -178,7 +193,7 @@ def inject(
     func: Optional[WrappedCallable] = None, squeeze_none: bool = False
 ) -> Union[WrappedCallable, Callable[[WrappedCallable], WrappedCallable]]:
     """
-    Used with `Provide`, inject values to provided defaults of the decorated
+    used with `Provide`, inject values to provided defaults of the decorated
     function/method when gets called.
     """
     if func is None:
@@ -192,9 +207,12 @@ def inject(
 
 
 def sync_container(from_: Any, to_: Any) -> None:
-    for i in dataclasses.fields(to_):
-        src = i.default
-        target = getattr(from_, i.name, None)
+    """
+    sync container states from `from_` to `to_`
+    """
+    for field in dataclasses.fields(to_):
+        src = field.default
+        target = getattr(from_, field.name, None)
         if target is None:
             continue
         if isinstance(src, Provider):

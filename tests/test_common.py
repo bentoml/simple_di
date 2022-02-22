@@ -8,12 +8,12 @@ import pytest
 
 from simple_di import Provide, Provider, container, inject
 from simple_di.providers import (
+    ConfigDictType,
     Configuration,
     Factory,
     Placeholder,
     SingletonFactory,
     Static,
-    ConfigDictType,
 )
 
 # Usage
@@ -34,6 +34,10 @@ def test_inject_function() -> None:
 
     assert func() == 5
     assert func(1) == 1
+
+    with OPTIONS.worker.patch(3):
+        assert func() == 3
+    assert func() == 5
 
     OPTIONS.worker.set(2)
     assert func() == 2
@@ -76,6 +80,10 @@ def test_inject_method() -> None:
 
     assert A().worker == A.create().worker == 5
     assert A(1).worker == A.create(1).worker == 1
+
+    with OPTIONS.worker.patch(3):
+        assert A().worker == A.create().worker == 3
+    assert A().worker == A.create().worker == 5
 
     OPTIONS.worker.set(2)
     assert A().worker == A.create().worker == 2
@@ -242,6 +250,6 @@ def test_complex_container() -> None:
 
     RUNTIME = Runtime()
 
-    OPTIONS.config.set(cast(ConfigDictType, dict(address="a.com", port=100)))
+    OPTIONS.config.set({"address": "a.com", "port": 100})
     assert OPTIONS.metrics.get() == ("a.com", 100)
     assert RUNTIME.metrics.get() == ("a.com", 100)
