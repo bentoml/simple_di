@@ -200,6 +200,9 @@ def inject(
         wrapper = functools.partial(_inject, squeeze_none=squeeze_none)
         return cast(Callable[[WrappedCallable], WrappedCallable], wrapper)
 
+    if getattr(func, "__class__"):
+        raise ValueError("`inject` shouldn't be used with class.")
+
     if callable(func):
         return _inject(func, squeeze_none=squeeze_none)
 

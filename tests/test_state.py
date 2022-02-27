@@ -155,8 +155,8 @@ def test_state_fields() -> None:
 
     point = Point(1, 2)
     assert point.get() == (1, 2)
-    assert hasattr(point, 'z')
+    assert hasattr(point, "z")
 
     new_point = pickle.loads(pickle.dumps(point))
     assert new_point.get() == (1, 2)
-    assert not hasattr(new_point, 'z')
+    assert not hasattr(new_point, "z")
