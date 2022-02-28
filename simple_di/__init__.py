@@ -203,7 +203,10 @@ def inject(
     if callable(func):
         return _inject(func, squeeze_none=squeeze_none)
 
-    raise ValueError("You must pass either None or Callable")
+    if isinstance(func, type):
+        raise TypeError("`inject` SHOULD not be used with class.")
+
+    raise ValueError("You must pass either None or Callable.")
 
 
 def sync_container(from_: Any, to_: Any) -> None:
