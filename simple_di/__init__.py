@@ -200,11 +200,11 @@ def inject(
         wrapper = functools.partial(_inject, squeeze_none=squeeze_none)
         return cast(Callable[[WrappedCallable], WrappedCallable], wrapper)
 
-    if callable(func):
-        return _inject(func, squeeze_none=squeeze_none)
-
     if isinstance(func, type):
         raise TypeError("`inject` SHOULD not be used with class.")
+
+    if callable(func):
+        return _inject(func, squeeze_none=squeeze_none)
 
     raise ValueError("You must pass either None or Callable.")
 
