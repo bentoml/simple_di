@@ -196,7 +196,7 @@ class _ConfigurationItem(Provider[Any]):
         for i in self._path[:-1]:
             if isinstance(i, Provider):
                 i = i.get()
-            _next: Union[_SentinelClass, Dict[Any, Any]] = _cursor.get(i, sentinel)
+            _next: Dict[Any, Any] = _cursor.get(i, sentinel)
             if isinstance(_next, _SentinelClass):
                 _next = {}
                 _cursor[i] = _next
@@ -219,7 +219,8 @@ class _ConfigurationItem(Provider[Any]):
             if isinstance(_cursor, dict):
                 _cursor = _cursor.get(i, None)
             else:
-                _cursor = _cursor[i]
+                if _cursor is not None:
+                    _cursor = _cursor[i]
         return _cursor
 
     def reset(self) -> None:
