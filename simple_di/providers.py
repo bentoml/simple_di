@@ -216,7 +216,10 @@ class _ConfigurationItem(Provider[Any]):
         for i in self._path:
             if isinstance(i, Provider):
                 i = i.get()
-            _cursor = _cursor[i]
+            if isinstance(_cursor, dict):
+                _cursor = _cursor.get(i, None)
+            else:
+                _cursor = _cursor[i]
         return _cursor
 
     def reset(self) -> None:
