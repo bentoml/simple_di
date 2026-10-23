@@ -136,7 +136,9 @@ Provide = _ProvideClass()
 def _inject_args(
     args: Tuple[Union[Provider[VT], Any], ...]
 ) -> Tuple[Union[VT, Any], ...]:
-    return tuple(a.get() if isinstance(a, Provider) else a for a in args)
+    return tuple(
+        cast(Provider[VT], a).get() if isinstance(a, Provider) else a for a in args
+    )
 
 
 def _inject_kwargs(

@@ -9,20 +9,23 @@ on:
 jobs:
   unit_tests:
     name: Python ${{ matrix.python-version }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest]
-        python-version: [ '3.6', '3.7', '3.8', '3.9' ]
+        python-version: [ '3.9', '3.10', '3.11', '3.12', '3.13', '3.14' ]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0  # fetch all tags and branches
-      - name: Setup node
-        uses: actions/setup-node@v2
+      - name: Setup python
+        uses: actions/setup-python@v6
         with:
-          node-version: '17'
+          python-version: ${{ matrix.python-version }}
+      - name: Setup node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '24.22.1'
       - name: Install test dependencies
         run: pip install .[test]
         shell: bash
